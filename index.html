@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puntaje de Cuadrillas - 8va Movilización Forestal</title>
+<style>
+  :root{
+    --verde-oscuro:#1b4332;
+    --verde:#2d6a4f;
+    --verde-claro:#40916c;
+    --naranja:#e76f51;
+    --fondo:#f4f6f5;
+    --texto:#1b1b1b;
+    --borde:#d7ddd9;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    background:var(--fondo);
+    color:var(--texto);
+    padding-bottom:60px;
+  }
+  header{
+    background:var(--verde-oscuro);
+    color:#fff;
+    padding:20px 16px;
+    text-align:center;
+  }
+  header h1{
+    margin:0 0 4px 0;
+    font-size:1.25rem;
+  }
+  header p{
+    margin:0;
+    opacity:.85;
+    font-size:.85rem;
+  }
+  .contenedor{
+    max-width:640px;
+    margin:0 auto;
+    padding:16px;
+  }
+  .card{
+    background:#fff;
+    border-radius:10px;
+    padding:18px;
+    margin-bottom:16px;
+    box-shadow:0 1px 4px rgba(0,0,0,.08);
+    border:1px solid var(--borde);
+  }
+  .card h2{
+    margin-top:0;
+    font-size:1rem;
+    color:var(--verde-oscuro);
+    border-bottom:2px solid var(--verde-claro);
+    padding-bottom:8px;
+  }
+  label{
+    display:block;
+    font-weight:600;
+    margin:12px 0 6px;
+    font-size:.9rem;
+  }
+  select{
+    width:100%;
+    padding:10px;
+    border-radius:8px;
+    border:1px solid var(--borde);
+    font-size:1rem;
+    background:#fff;
+  }
+  .criterio-bloque{
+    margin-bottom:18px;
+    padding-bottom:14px;
+    border-bottom:1px dashed var(--borde);
+  }
+  .criterio-bloque:last-child{
+    border-bottom:none;
+  }
+  .criterio-titulo{
+    font-weight:700;
+    color:var(--verde);
+    margin-bottom:8px;
+    font-size:.92rem;
+  }
+  .opcion{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:9px 10px;
+    border-radius:8px;
+    margin-bottom:6px;
+    border:1px solid var(--borde);
+    cursor:pointer;
+    transition:background .15s;
+  }
+  .opcion:hover{
+    background:#f0f6f3;
+  }
+  .opcion.seleccionada{
+    background:#e8f5ee;
+    border-color:var(--verde-claro);
+  }
+  .opcion input{
+    margin-top:3px;
+  }
+  .opcion .texto-opcion{
+    flex:1;
+    font-size:.88rem;
+    line-height:1.35;
+  }
+  .opcion .pts{
+    font-weight:700;
+    color:var(--verde);
+    white-space:nowrap;
+    font-size:.85rem;
+  }
+  .opcion-cero{
+    border-color:#e0b4a8;
+  }
+  .opcion-cero .pts{
+    color:var(--naranja);
+  }
+  .total-flotante{
+    position:sticky;
+    bottom:0;
+    background:var(--verde-oscuro);
+    color:#fff;
+    padding:14px 16px;
+    border-radius:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top:4px;
+    box-shadow:0 -2px 8px rgba(0,0,0,.15);
+  }
+  .total-flotante span.num{
+    font-size:1.4rem;
+    font-weight:800;
+  }
+  button#btnEnviar{
+    width:100%;
+    background:var(--naranja);
+    color:#fff;
+    border:none;
+    padding:15px;
+    border-radius:10px;
+    font-size:1.05rem;
+    font-weight:700;
+    margin-top:16px;
+    cursor:pointer;
+  }
+  button#btnEnviar:disabled{
+    background:#ccc;
+    cursor:not-allowed;
+  }
+  .estado{
+    text-align:center;
+    padding:12px;
+    border-radius:8px;
+    margin-top:12px;
+    font-weight:600;
+    display:none;
+  }
+  .estado.ok{
+    display:block;
+    background:#e8f5ee;
+    color:var(--verde-oscuro);
+    border:1px solid var(--verde-claro);
+  }
+  .estado.error{
+    display:block;
+    background:#fdecea;
+    color:#b3261e;
+    border:1px solid #f0a89c;
+  }
+  .estado.cargando{
+    display:block;
+    background:#fff8e6;
+    color:#8a6d00;
+    border:1px solid #f0d98a;
+  }
+  .oculto{display:none;}
+  .aviso-config{
+    background:#fff8e6;
+    border:1px solid #f0d98a;
+    color:#8a6d00;
+    padding:12px;
+    border-radius:8px;
+    font-size:.82rem;
+    margin-bottom:14px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Planilla de Puntaje</h1>
+  <p>8va Movilización Forestal · Cuadrillas UFIR</p>
+</header>
+
+<div class="contenedor">
+
+  <div id="avisoConfig" class="aviso-config oculto"></div>
+
+  <div class="card">
+    <h2>1. Datos de la evaluación</h2>
+
+    <label for="selJuez">Juez</label>
+    <select id="selJuez"><option value="">Cargando jueces...</option></select>
+
+    <label for="selCuadrilla">Cuadrilla</label>
+    <select id="selCuadrilla"><option value="">Cargando cuadrillas...</option></select>
+
+    <label for="selModalidad">Modalidad / Estación</label>
+    <select id="selModalidad"><option value="">Cargando modalidades...</option></select>
+  </div>
+
+  <div id="cardCriterios" class="card oculto">
+    <h2>2. Criterios de evaluación</h2>
+    <div id="listaCriterios"></div>
+  </div>
+
+  <div id="totalFlotante" class="total-flotante oculto">
+    <span>Puntaje total</span>
+    <span class="num"><span id="totalNum">0</span> pts</span>
+  </div>
+
+  <button id="btnEnviar" disabled>Completá todos los criterios para enviar</button>
+
+  <div id="estado" class="estado"></div>
+
+</div>
+
+<script>
+/* ============================================================
+   CONFIGURACIÓN
+   ============================================================ */
+
+// CSV publicados del Google Sheet (se actualizan solos si editás la planilla)
+const CUADRILLAS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqjkb1s3kYmUEpoTIZtnwx1fEjxczdzyh7ehLV2FX9qDdSph-OYFLR3wXaqW5IivkaoSx9tV7apCx9/pub?output=csv";
+const JUECES_CSV_URL      = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqjkb1s3kYmUEpoTIZtnwx1fEjxczdzyh7ehLV2FX9qDdSph-OYFLR3wXaqW5IivkaoSx9tV7apCx9/pub?gid=919811758&single=true&output=csv";
+const PUNTAJE_CSV_URL     = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqjkb1s3kYmUEpoTIZtnwx1fEjxczdzyh7ehLV2FX9qDdSph-OYFLR3wXaqW5IivkaoSx9tV7apCx9/pub?gid=669454951&single=true&output=csv";
+
+// PEGAR ACÁ la URL del Web App de Apps Script una vez desplegado (ver instrucciones)
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQraXmdH1YEYBiLqbC3dKALZpnFduhyqsbfLWkhIY8upLY7tx8l4oVpMw3VPcUM7Nb/exec";
+
+/* ============================================================
+   PARSER CSV (soporta comas y comillas dentro de celdas)
+   ============================================================ */
+function parseCSV(texto){
+  const filas = [];
+  let fila = [];
+  let campo = "";
+  let entreComillas = false;
+
+  for(let i=0; i<texto.length; i++){
+    const c = texto[i];
+    const sig = texto[i+1];
+
+    if(entreComillas){
+      if(c === '"' && sig === '"'){ campo += '"'; i++; }
+      else if(c === '"'){ entreComillas = false; }
+      else { campo += c; }
+    } else {
+      if(c === '"'){ entreComillas = true; }
+      else if(c === ','){ fila.push(campo); campo=""; }
+      else if(c === '\n'){ fila.push(campo); filas.push(fila); fila=[]; campo=""; }
+      else if(c === '\r'){ /* ignorar */ }
+      else { campo += c; }
+    }
+  }
+  if(campo.length || fila.length){ fila.push(campo); filas.push(fila); }
+  return filas.filter(f => f.some(v => v && v.trim() !== ""));
+}
+
+async function obtenerCSV(url){
+  const resp = await fetch(url + (url.includes("?") ? "&" : "?") + "_ts=" + Date.now());
+  if(!resp.ok) throw new Error("No se pudo cargar: " + url);
+  const texto = await resp.text();
+  return parseCSV(texto);
+}
+
+/* ============================================================
+   ESTADO GLOBAL
+   ============================================================ */
+let RUBRICA = {}; // { modalidad: { criterio: [ {cumplimiento, puntaje}, ... ] } }
+let ORDEN_MODALIDADES = [];
+let respuestasActuales = {}; // { criterio: {cumplimiento, puntaje} }
+
+/* ============================================================
+   CARGA INICIAL
+   ============================================================ */
+async function iniciar(){
+  try{
+    const [filasCuadrillas, filasJueces, filasPuntaje] = await Promise.all([
+      obtenerCSV(CUADRILLAS_CSV_URL),
+      obtenerCSV(JUECES_CSV_URL),
+      obtenerCSV(PUNTAJE_CSV_URL)
+    ]);
+
+    llenarSelect("selCuadrilla", filasCuadrillas.slice(1).map(f => f[0]).filter(Boolean));
+    llenarSelect("selJuez", filasJueces.slice(1).map(f => f[0]).filter(Boolean));
+
+    construirRubrica(filasPuntaje);
+    llenarSelect("selModalidad", ORDEN_MODALIDADES);
+
+  }catch(err){
+    mostrarEstado("error", "No se pudieron cargar los datos de la planilla. Revisá tu conexión y volvé a intentar. (" + err.message + ")");
+  }
+}
+
+function llenarSelect(id, opciones){
+  const sel = document.getElementById(id);
+  sel.innerHTML = '<option value="">-- Seleccionar --</option>' +
+    opciones.map(o => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join("");
+}
+
+function construirRubrica(filas){
+  // filas[0] = encabezado: MODALIDAD, CRITERIO, CUMPLIMIENTO, PUNTAJE
+  RUBRICA = {};
+  ORDEN_MODALIDADES = [];
+  for(let i=1; i<filas.length; i++){
+    const [modalidad, criterio, cumplimiento, puntaje] = filas[i];
+    if(!modalidad || !criterio) continue;
+    if(!RUBRICA[modalidad]){ RUBRICA[modalidad] = {}; ORDEN_MODALIDADES.push(modalidad); }
+    if(!RUBRICA[modalidad][criterio]) RUBRICA[modalidad][criterio] = [];
+    RUBRICA[modalidad][criterio].push({
+      cumplimiento: cumplimiento || "",
+      puntaje: parseFloat((puntaje || "0").toString().replace(",", "."))
+    });
+  }
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, m => ({
+    "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;"
+  }[m]));
+}
+
+/* ============================================================
+   RENDER DE CRITERIOS SEGÚN MODALIDAD
+   ============================================================ */
+document.getElementById("selModalidad").addEventListener("change", renderCriterios);
+
+function renderCriterios(){
+  const modalidad = document.getElementById("selModalidad").value;
+  const cont = document.getElementById("listaCriterios");
+  const card = document.getElementById("cardCriterios");
+  const totalFlot = document.getElementById("totalFlotante");
+  respuestasActuales = {};
+  cont.innerHTML = "";
+
+  if(!modalidad || !RUBRICA[modalidad]){
+    card.classList.add("oculto");
+    totalFlot.classList.add("oculto");
+    actualizarBotonEnviar();
+    return;
+  }
+
+  const criterios = RUBRICA[modalidad];
+  Object.keys(criterios).forEach(criterio => {
+    const opciones = criterios[criterio];
+    const bloque = document.createElement("div");
+    bloque.className = "criterio-bloque";
+
+    const titulo = document.createElement("div");
+    titulo.className = "criterio-titulo";
+    titulo.textContent = criterio;
+    bloque.appendChild(titulo);
+
+    const grupo = `crit_${criterio.replace(/[^a-zA-Z0-9]/g,"_")}`;
+
+    opciones.forEach((op, idx) => {
+      bloque.appendChild(crearOpcion(grupo, criterio, op.cumplimiento, op.puntaje, idx));
+    });
+
+    // opción de "no cumple / 0 puntos" siempre disponible
+    bloque.appendChild(crearOpcion(grupo, criterio, "No cumple / No realizado", 0, "cero"));
+
+    cont.appendChild(bloque);
+  });
+
+  card.classList.remove("oculto");
+  totalFlot.classList.remove("oculto");
+  actualizarBotonEnviar();
+}
+
+function crearOpcion(grupo, criterio, texto, puntaje, idx){
+  const div = document.createElement("label");
+  div.className = "opcion" + (idx === "cero" ? " opcion-cero" : "");
+
+  const input = document.createElement("input");
+  input.type = "radio";
+  input.name = grupo;
+  input.value = puntaje;
+  input.addEventListener("change", () => {
+    respuestasActuales[criterio] = { cumplimiento: texto, puntaje: puntaje };
+    // marcar visualmente
+    document.querySelectorAll(`input[name="${grupo}"]`).forEach(r => {
+      r.closest(".opcion").classList.toggle("seleccionada", r.checked);
+    });
+    actualizarTotal();
+    actualizarBotonEnviar();
+  });
+
+  const spanTexto = document.createElement("span");
+  spanTexto.className = "texto-opcion";
+  spanTexto.textContent = texto;
+
+  const spanPts = document.createElement("span");
+  spanPts.className = "pts";
+  spanPts.textContent = puntaje + " pts";
+
+  div.appendChild(input);
+  div.appendChild(spanTexto);
+  div.appendChild(spanPts);
+  return div;
+}
+
+function actualizarTotal(){
+  const total = Object.values(respuestasActuales).reduce((s, r) => s + (r.puntaje || 0), 0);
+  document.getElementById("totalNum").textContent = total;
+}
+
+function actualizarBotonEnviar(){
+  const modalidad = document.getElementById("selModalidad").value;
+  const juez = document.getElementById("selJuez").value;
+  const cuadrilla = document.getElementById("selCuadrilla").value;
+  const btn = document.getElementById("btnEnviar");
+
+  if(!modalidad || !juez || !cuadrilla){
+    btn.disabled = true;
+    btn.textContent = "Completá juez, cuadrilla y modalidad";
+    return;
+  }
+  const totalCriterios = Object.keys(RUBRICA[modalidad] || {}).length;
+  const respondidos = Object.keys(respuestasActuales).length;
+
+  if(respondidos < totalCriterios){
+    btn.disabled = true;
+    btn.textContent = `Completá todos los criterios (${respondidos}/${totalCriterios})`;
+  } else {
+    btn.disabled = false;
+    btn.textContent = "Enviar puntaje";
+  }
+}
+
+document.getElementById("selJuez").addEventListener("change", actualizarBotonEnviar);
+document.getElementById("selCuadrilla").addEventListener("change", actualizarBotonEnviar);
+
+/* ============================================================
+   ENVÍO
+   ============================================================ */
+document.getElementById("btnEnviar").addEventListener("click", enviarPuntaje);
+
+async function enviarPuntaje(){
+  const juez = document.getElementById("selJuez").value;
+  const cuadrilla = document.getElementById("selCuadrilla").value;
+  const modalidad = document.getElementById("selModalidad").value;
+  const total = Object.values(respuestasActuales).reduce((s, r) => s + (r.puntaje || 0), 0);
+
+  const criteriosArray = Object.keys(respuestasActuales).map(criterio => ({
+    criterio,
+    cumplimiento: respuestasActuales[criterio].cumplimiento,
+    puntaje: respuestasActuales[criterio].puntaje
+  }));
+
+  const payload = { juez, cuadrilla, modalidad, total, criterios: criteriosArray };
+
+  if(APPS_SCRIPT_URL === "PEGAR_AQUI_URL_WEBAPP"){
+    mostrarEstado("error", "Falta configurar la URL del Web App de Apps Script en el código (APPS_SCRIPT_URL).");
+    return;
+  }
+
+  mostrarEstado("cargando", "Enviando puntaje...");
+  document.getElementById("btnEnviar").disabled = true;
+
+  try{
+    await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+    // Apps Script Web Apps con fetch simple no siempre exponen la respuesta por CORS,
+    // así que asumimos éxito si no hubo excepción de red.
+    mostrarEstado("ok", `Puntaje guardado: ${cuadrilla} - ${modalidad} (${total} pts). Podés cargar el siguiente.`);
+    resetearFormularioParcial();
+  }catch(err){
+    mostrarEstado("error", "Error de red al enviar. Verificá tu conexión e intentá de nuevo. (" + err.message + ")");
+    document.getElementById("btnEnviar").disabled = false;
+  }
+}
+
+function resetearFormularioParcial(){
+  document.getElementById("selCuadrilla").value = "";
+  document.getElementById("selModalidad").value = "";
+  respuestasActuales = {};
+  document.getElementById("cardCriterios").classList.add("oculto");
+  document.getElementById("totalFlotante").classList.add("oculto");
+  actualizarBotonEnviar();
+}
+
+function mostrarEstado(tipo, mensaje){
+  const el = document.getElementById("estado");
+  el.className = "estado " + tipo;
+  el.textContent = mensaje;
+}
+
+// Aviso si falta configurar la URL del Web App
+if(APPS_SCRIPT_URL === "PEGAR_AQUI_URL_WEBAPP"){
+  const aviso = document.getElementById("avisoConfig");
+  aviso.classList.remove("oculto");
+  aviso.textContent = "⚠ Configuración pendiente: falta pegar la URL del Web App de Apps Script en la constante APPS_SCRIPT_URL dentro del código de este archivo.";
+}
+
+iniciar();
+</script>
+
+</body>
+</html>
