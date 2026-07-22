@@ -245,7 +245,7 @@ const JUECES_CSV_URL      = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQq
 const PUNTAJE_CSV_URL     = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqjkb1s3kYmUEpoTIZtnwx1fEjxczdzyh7ehLV2FX9qDdSph-OYFLR3wXaqW5IivkaoSx9tV7apCx9/pub?gid=669454951&single=true&output=csv";
 
 // PEGAR ACÁ la URL del Web App de Apps Script una vez desplegado (ver instrucciones)
-const APPS_SCRIPT_URL = "PEGAR_AQUI_URL_WEBAPP";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQraXmdH1YEYBiLqbC3dKALZpnFduhyqsbfLWkhIY8upLY7tx8l4oVpMw3VPcUM7Nb/exec";
 
 /* ============================================================
    PARSER CSV (soporta comas y comillas dentro de celdas)
