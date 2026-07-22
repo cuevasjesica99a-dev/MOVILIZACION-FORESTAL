@@ -245,7 +245,7 @@ const JUECES_CSV_URL      = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQq
 const PUNTAJE_CSV_URL     = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqjkb1s3kYmUEpoTIZtnwx1fEjxczdzyh7ehLV2FX9qDdSph-OYFLR3wXaqW5IivkaoSx9tV7apCx9/pub?gid=669454951&single=true&output=csv";
 
 // PEGAR ACÁ la URL del Web App de Apps Script una vez desplegado (ver instrucciones)
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyQraXmdH1YEYBiLqbC3dKALZpnFduhyqsbfLWkhIY8upLY7tx8l4oVpMw3VPcUM7Nb/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzwIgNgB5BxWofblMh9FhAwNtp3QoiThcatOZeQ1W7e3yhaPnE6XoDOvvUYKnr6WVVu/exec";
 
 /* ============================================================
    PARSER CSV (soporta comas y comillas dentro de celdas)
@@ -479,13 +479,17 @@ async function enviarPuntaje(){
   document.getElementById("btnEnviar").disabled = true;
 
   try{
+    // mode:"no-cors" evita que el navegador bloquee la respuesta por CORS.
+    // Apps Script SIEMPRE redirige su respuesta y esa redirección no trae
+    // headers CORS, aunque el dato ya se haya guardado correctamente en la hoja.
+    // Con no-cors no podemos leer el contenido de la respuesta, pero el envío
+    // llega igual al servidor.
     await fetch(APPS_SCRIPT_URL, {
       method: "POST",
+      mode: "no-cors",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload)
     });
-    // Apps Script Web Apps con fetch simple no siempre exponen la respuesta por CORS,
-    // así que asumimos éxito si no hubo excepción de red.
     mostrarEstado("ok", `Puntaje guardado: ${cuadrilla} - ${modalidad} (${total} pts). Podés cargar el siguiente.`);
     resetearFormularioParcial();
   }catch(err){
