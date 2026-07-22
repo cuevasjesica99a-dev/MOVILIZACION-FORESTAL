@@ -1,0 +1,123 @@
+/**
+ * APPS SCRIPT - Recepción de puntajes del formulario HTML
+ * ---------------------------------------------------------
+ * Instalar:
+ * 1. Abrí tu Google Sheet ("PUTAJE DE CUADRILLAS 8VA MOVILIZACION FORESTAL").
+ * 2. Menú Extensiones > Apps Script.
+ * 3. Borrá el contenido de Code.gs por defecto y pegá TODO este archivo.
+ * 4. Ajustá NOMBRE_HOJA_DESTINO abajo si tu pestaña no se llama exactamente "Hoja 4".
+ * 5. Guardá (icono de disquete).
+ * 6. Implementar > Nueva implementación > tipo "Aplicación web".
+ *      - Ejecutar como: Yo (tu cuenta)
+ *      - Quién tiene acceso: Cualquier usuario
+ * 7. Autorizá los permisos que pida Google.
+ * 8. Copiá la URL que te da ("URL de la aplicación web") y pegala en
+ *    formulario_puntaje.html, en la constante APPS_SCRIPT_URL.
+ *
+ * Cada vez que vuelvas a "Implementar > Gestionar implementaciones > Editar"
+ * y cambies el código, tenés que crear una NUEVA VERSIÓN para que los
+ * cambios se apliquen (el botón de lápiz > Versión: Nueva versión > Implementar).
+ */
+
+const NOMBRE_HOJA_DESTINO = "Hoja 4"; // <-- ajustar si el nombre real es distinto
+
+const ENCABEZADOS = [
+  "Fecha y Hora",
+  "Juez",
+  "Cuadrilla",
+  "Modalidad",
+  "Criterio",
+  "Cumplimiento",
+  "Puntaje"
+];
+
+function doPost(e) {
+  try {
+    const datos = JSON.parse(e.postData.contents);
+    const hoja = obtenerOCrearHoja();
+    const fechaHora = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
+
+    const filas = [];
+
+    // Una fila por cada criterio evaluado
+    (datos.criterios || []).forEach(function (c) {
+      filas.push([
+        fechaHora,
+        datos.juez || "",
+        datos.cuadrilla || "",
+        datos.modalidad || "",
+        c.criterio || "",
+        c.cumplimiento || "",
+        c.puntaje != null ? c.puntaje : ""
+      ]);
+    });
+
+    // Fila resumen con el total de esa modalidad
+    filas.push([
+      fechaHora,
+      datos.juez || "",
+      datos.cuadrilla || "",
+      datos.modalidad || "",
+      "TOTAL MODALIDAD",
+      "",
+      datos.total != null ? datos.total : ""
+    ]);
+
+    if (filas.length > 0) {
+      hoja.getRange(hoja.getLastRow() + 1, 1, filas.length, ENCABEZADOS.length).setValues(filas);
+    }
+
+    return respuestaJson({ ok: true, filasEscritas: filas.length });
+
+  } catch (err) {
+    return respuestaJson({ ok: false, error: err.message });
+  }
+}
+
+function obtenerOCrearHoja() {
+  const libro = SpreadsheetApp.getActiveSpreadsheet();
+  let hoja = libro.getSheetByName(NOMBRE_HOJA_DESTINO);
+
+  if (!hoja) {
+    hoja = libro.insertSheet(NOMBRE_HOJA_DESTINO);
+  }
+
+  if (hoja.getLastRow() === 0) {
+    hoja.getRange(1, 1, 1, ENCABEZADOS.length).setValues([ENCABEZADOS]);
+    hoja.setFrozenRows(1);
+  }
+
+  return hoja;
+}
+
+function respuestaJson(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Función de prueba manual: ejecutala desde el editor (Ejecutar > testDoPost)
+ * para verificar que la escritura en la hoja funciona sin necesidad del
+ * formulario HTML.
+ */
+function testDoPost() {
+  const evento = {
+    postData: {
+      contents: JSON.stringify({
+        juez: "JUEZ 1",
+        cuadrilla: "CUADRILLA 1",
+        modalidad: "USO DE MACHETE",
+        total: 90,
+        criterios: [
+          { criterio: "EXTENSIÓN DEL CORTE", cumplimiento: "Realiza los 20 m de largo × 3 m de ancho completos", puntaje: 20 },
+          { criterio: "CALIDAD DEL CORTE", cumplimiento: "Corte uniforme, a nivel de suelo vegetal, sin rebrotes altos", puntaje: 30 },
+          { criterio: "RECURSOS EMPLEADOS", cumplimiento: "Uso eficiente del machete y EPI, sin desperdicio de esfuerzo", puntaje: 20 },
+          { criterio: "TIEMPO", cumplimiento: "Menos de 6 minutos", puntaje: 30 }
+        ]
+      })
+    }
+  };
+  const resultado = doPost(evento);
+  Logger.log(resultado.getContent());
+}
