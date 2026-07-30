@@ -71,6 +71,41 @@
     font-size:1rem;
     background:#fff;
   }
+  input[type="text"], input[type="number"]{
+    width:100%;
+    padding:10px;
+    border-radius:8px;
+    border:1px solid var(--borde);
+    font-size:1rem;
+    background:#fff;
+    font-family:inherit;
+  }
+  .tiempo-real{
+    margin-top:10px;
+    padding:10px 12px;
+    background:#f0f6f3;
+    border:1px solid var(--verde-claro);
+    border-radius:8px;
+  }
+  .tiempo-real label{
+    margin:0 0 6px;
+    font-size:.82rem;
+    color:var(--verde-oscuro);
+  }
+  .tiempo-real-inputs{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .tiempo-real-inputs input{
+    width:70px;
+    text-align:center;
+    flex:none;
+  }
+  .tiempo-real-inputs span{
+    font-size:.85rem;
+    color:var(--texto);
+  }
   .criterio-bloque{
     margin-bottom:18px;
     padding-bottom:14px;
@@ -214,6 +249,11 @@
     <label for="selCuadrilla">Cuadrilla</label>
     <select id="selCuadrilla"><option value="">Cargando cuadrillas...</option></select>
 
+    <div id="campoParticipante" class="oculto">
+      <label for="inputParticipante">Nombre del participante</label>
+      <input type="text" id="inputParticipante" placeholder="Escribí el nombre del participante" autocomplete="off"/>
+    </div>
+
     <label for="selModalidad">Modalidad / Estación</label>
     <select id="selModalidad"><option value="">Cargando modalidades...</option></select>
   </div>
@@ -246,6 +286,12 @@ const PUNTAJE_CSV_URL     = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQq
 
 // PEGAR ACÁ la URL del Web App de Apps Script una vez desplegado (ver instrucciones)
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyRb-jY8Y9eg0eUE6_aDqZbv-NRf4_MrqDAFCc7f2BN6FDQlzzkGLB5jDhA__GS0Qma/exec";
+
+// Modalidades donde se evalúa a un participante individual (no a la cuadrilla en conjunto)
+const MODALIDADES_CON_PARTICIPANTE = ["USO DE MACHETE", "USO DE MOTOSIERRA", "USO DE GORGY", "USO DE PULASKY"];
+
+// Nombre del criterio que representa el tiempo (para mostrar el campo de minutos y segundos)
+const CRITERIO_TIEMPO = "TIEMPO";
 
 /* ============================================================
    PARSER CSV (soporta comas y comillas dentro de celdas)
@@ -289,6 +335,7 @@ async function obtenerCSV(url){
 let RUBRICA = {}; // { modalidad: { criterio: [ {cumplimiento, puntaje}, ... ] } }
 let ORDEN_MODALIDADES = [];
 let respuestasActuales = {}; // { criterio: {cumplimiento, puntaje} }
+let tiempoReal = ""; // "MM:SS" del criterio TIEMPO, si corresponde
 
 /* ============================================================
    CARGA INICIAL
@@ -350,8 +397,19 @@ function renderCriterios(){
   const cont = document.getElementById("listaCriterios");
   const card = document.getElementById("cardCriterios");
   const totalFlot = document.getElementById("totalFlotante");
+  const campoParticipante = document.getElementById("campoParticipante");
+  const inputParticipante = document.getElementById("inputParticipante");
   respuestasActuales = {};
+  tiempoReal = "";
   cont.innerHTML = "";
+
+  // Mostrar el campo de participante solo para las modalidades individuales
+  if(MODALIDADES_CON_PARTICIPANTE.includes(modalidad)){
+    campoParticipante.classList.remove("oculto");
+  } else {
+    campoParticipante.classList.add("oculto");
+    inputParticipante.value = "";
+  }
 
   if(!modalidad || !RUBRICA[modalidad]){
     card.classList.add("oculto");
@@ -372,13 +430,44 @@ function renderCriterios(){
     bloque.appendChild(titulo);
 
     const grupo = `crit_${criterio.replace(/[^a-zA-Z0-9]/g,"_")}`;
+    const esCriterioTiempo = criterio.trim().toUpperCase() === CRITERIO_TIEMPO;
 
     opciones.forEach((op, idx) => {
-      bloque.appendChild(crearOpcion(grupo, criterio, op.cumplimiento, op.puntaje, idx));
+      bloque.appendChild(crearOpcion(grupo, criterio, op.cumplimiento, op.puntaje, idx, esCriterioTiempo));
     });
 
     // opción de "no cumple / 0 puntos" siempre disponible
-    bloque.appendChild(crearOpcion(grupo, criterio, "No cumple / No realizado", 0, "cero"));
+    bloque.appendChild(crearOpcion(grupo, criterio, "No cumple / No realizado", 0, "cero", esCriterioTiempo));
+
+    // Bloque de tiempo real (minutos y segundos), oculto hasta que se elija un puntaje
+    if(esCriterioTiempo){
+      const tiempoDiv = document.createElement("div");
+      tiempoDiv.className = "tiempo-real oculto";
+      tiempoDiv.id = `tiempoReal_${grupo}`;
+      tiempoDiv.innerHTML = `
+        <label>Tiempo real de la cuadrilla en esta modalidad</label>
+        <div class="tiempo-real-inputs">
+          <input type="number" id="tiempoMin_${grupo}" min="0" max="59" placeholder="MM"/>
+          <span>min</span>
+          <input type="number" id="tiempoSeg_${grupo}" min="0" max="59" placeholder="SS"/>
+          <span>seg</span>
+        </div>`;
+      bloque.appendChild(tiempoDiv);
+
+      // Actualizar el tiempo real cada vez que se cambian los minutos/segundos
+      setTimeout(() => {
+        const inMin = document.getElementById(`tiempoMin_${grupo}`);
+        const inSeg = document.getElementById(`tiempoSeg_${grupo}`);
+        const actualizarTiempoReal = () => {
+          const mm = String(inMin.value || "0").padStart(2, "0");
+          const ss = String(inSeg.value || "0").padStart(2, "0");
+          tiempoReal = (inMin.value !== "" || inSeg.value !== "") ? `${mm}:${ss}` : "";
+          actualizarBotonEnviar();
+        };
+        inMin.addEventListener("input", actualizarTiempoReal);
+        inSeg.addEventListener("input", actualizarTiempoReal);
+      }, 0);
+    }
 
     cont.appendChild(bloque);
   });
@@ -388,7 +477,7 @@ function renderCriterios(){
   actualizarBotonEnviar();
 }
 
-function crearOpcion(grupo, criterio, texto, puntaje, idx){
+function crearOpcion(grupo, criterio, texto, puntaje, idx, esCriterioTiempo){
   const div = document.createElement("label");
   div.className = "opcion" + (idx === "cero" ? " opcion-cero" : "");
 
@@ -402,6 +491,11 @@ function crearOpcion(grupo, criterio, texto, puntaje, idx){
     document.querySelectorAll(`input[name="${grupo}"]`).forEach(r => {
       r.closest(".opcion").classList.toggle("seleccionada", r.checked);
     });
+    // al elegir un puntaje en el criterio de TIEMPO, mostrar el campo de tiempo real
+    if(esCriterioTiempo){
+      const tiempoDiv = document.getElementById(`tiempoReal_${grupo}`);
+      if(tiempoDiv) tiempoDiv.classList.remove("oculto");
+    }
     actualizarTotal();
     actualizarBotonEnviar();
   });
@@ -436,20 +530,39 @@ function actualizarBotonEnviar(){
     btn.textContent = "Completá juez, cuadrilla y modalidad";
     return;
   }
+
+  if(MODALIDADES_CON_PARTICIPANTE.includes(modalidad)){
+    const nombreParticipante = document.getElementById("inputParticipante").value.trim();
+    if(!nombreParticipante){
+      btn.disabled = true;
+      btn.textContent = "Escribí el nombre del participante";
+      return;
+    }
+  }
+
   const totalCriterios = Object.keys(RUBRICA[modalidad] || {}).length;
   const respondidos = Object.keys(respuestasActuales).length;
 
   if(respondidos < totalCriterios){
     btn.disabled = true;
     btn.textContent = `Completá todos los criterios (${respondidos}/${totalCriterios})`;
-  } else {
-    btn.disabled = false;
-    btn.textContent = "Enviar puntaje";
+    return;
   }
+
+  const hayTiempo = Object.keys(RUBRICA[modalidad] || {}).some(c => c.trim().toUpperCase() === CRITERIO_TIEMPO);
+  if(hayTiempo && !tiempoReal){
+    btn.disabled = true;
+    btn.textContent = "Completá el tiempo real (min y seg)";
+    return;
+  }
+
+  btn.disabled = false;
+  btn.textContent = "Enviar puntaje";
 }
 
 document.getElementById("selJuez").addEventListener("change", actualizarBotonEnviar);
 document.getElementById("selCuadrilla").addEventListener("change", actualizarBotonEnviar);
+document.getElementById("inputParticipante").addEventListener("input", actualizarBotonEnviar);
 
 /* ============================================================
    ENVÍO
@@ -460,15 +573,19 @@ async function enviarPuntaje(){
   const juez = document.getElementById("selJuez").value;
   const cuadrilla = document.getElementById("selCuadrilla").value;
   const modalidad = document.getElementById("selModalidad").value;
+  const participante = MODALIDADES_CON_PARTICIPANTE.includes(modalidad)
+    ? document.getElementById("inputParticipante").value.trim()
+    : "";
   const total = Object.values(respuestasActuales).reduce((s, r) => s + (r.puntaje || 0), 0);
 
   const criteriosArray = Object.keys(respuestasActuales).map(criterio => ({
     criterio,
     cumplimiento: respuestasActuales[criterio].cumplimiento,
-    puntaje: respuestasActuales[criterio].puntaje
+    puntaje: respuestasActuales[criterio].puntaje,
+    tiempoReal: criterio.trim().toUpperCase() === CRITERIO_TIEMPO ? tiempoReal : ""
   }));
 
-  const payload = { juez, cuadrilla, modalidad, total, criterios: criteriosArray };
+  const payload = { juez, cuadrilla, modalidad, participante, tiempoReal, total, criterios: criteriosArray };
 
   if(APPS_SCRIPT_URL === "PEGAR_AQUI_URL_WEBAPP"){
     mostrarEstado("error", "Falta configurar la URL del Web App de Apps Script en el código (APPS_SCRIPT_URL).");
@@ -501,7 +618,10 @@ async function enviarPuntaje(){
 function resetearFormularioParcial(){
   document.getElementById("selCuadrilla").value = "";
   document.getElementById("selModalidad").value = "";
+  document.getElementById("inputParticipante").value = "";
+  document.getElementById("campoParticipante").classList.add("oculto");
   respuestasActuales = {};
+  tiempoReal = "";
   document.getElementById("cardCriterios").classList.add("oculto");
   document.getElementById("totalFlotante").classList.add("oculto");
   actualizarBotonEnviar();
