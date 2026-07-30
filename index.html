@@ -293,6 +293,9 @@ const MODALIDADES_CON_PARTICIPANTE = ["USO DE MACHETE", "USO DE MOTOSIERRA", "US
 // Nombre del criterio que representa el tiempo (para mostrar el campo de minutos y segundos)
 const CRITERIO_TIEMPO = "TIEMPO";
 
+// Modalidades cuyo tiempo real se mide en HORAS, minutos y segundos (en vez de solo min:seg)
+const MODALIDADES_TIEMPO_EN_HORAS = ["LINEA DE DEFENSA"];
+
 /* ============================================================
    PARSER CSV (soporta comas y comillas dentro de celdas)
    ============================================================ */
@@ -439,12 +442,22 @@ function renderCriterios(){
     // opción de "no cumple / 0 puntos" siempre disponible
     bloque.appendChild(crearOpcion(grupo, criterio, "No cumple / No realizado", 0, "cero", esCriterioTiempo));
 
-    // Bloque de tiempo real (minutos y segundos), oculto hasta que se elija un puntaje
+    // Bloque de tiempo real (horas/minutos/segundos según la modalidad), oculto hasta que se elija un puntaje
     if(esCriterioTiempo){
+      const usaHoras = MODALIDADES_TIEMPO_EN_HORAS.includes(modalidad.trim().toUpperCase());
       const tiempoDiv = document.createElement("div");
       tiempoDiv.className = "tiempo-real oculto";
       tiempoDiv.id = `tiempoReal_${grupo}`;
-      tiempoDiv.innerHTML = `
+      tiempoDiv.innerHTML = usaHoras ? `
+        <label>Tiempo real de la cuadrilla en esta modalidad</label>
+        <div class="tiempo-real-inputs">
+          <input type="number" id="tiempoHor_${grupo}" min="0" max="23" placeholder="HH"/>
+          <span>hs</span>
+          <input type="number" id="tiempoMin_${grupo}" min="0" max="59" placeholder="MM"/>
+          <span>min</span>
+          <input type="number" id="tiempoSeg_${grupo}" min="0" max="59" placeholder="SS"/>
+          <span>seg</span>
+        </div>` : `
         <label>Tiempo real de la cuadrilla en esta modalidad</label>
         <div class="tiempo-real-inputs">
           <input type="number" id="tiempoMin_${grupo}" min="0" max="59" placeholder="MM"/>
@@ -454,16 +467,20 @@ function renderCriterios(){
         </div>`;
       bloque.appendChild(tiempoDiv);
 
-      // Actualizar el tiempo real cada vez que se cambian los minutos/segundos
+      // Actualizar el tiempo real cada vez que se cambian los campos
       setTimeout(() => {
+        const inHor = usaHoras ? document.getElementById(`tiempoHor_${grupo}`) : null;
         const inMin = document.getElementById(`tiempoMin_${grupo}`);
         const inSeg = document.getElementById(`tiempoSeg_${grupo}`);
         const actualizarTiempoReal = () => {
+          const hh = inHor ? String(inHor.value || "0").padStart(2, "0") : null;
           const mm = String(inMin.value || "0").padStart(2, "0");
           const ss = String(inSeg.value || "0").padStart(2, "0");
-          tiempoReal = (inMin.value !== "" || inSeg.value !== "") ? `${mm}:${ss}` : "";
+          const hayValor = (inHor && inHor.value !== "") || inMin.value !== "" || inSeg.value !== "";
+          tiempoReal = hayValor ? (inHor ? `${hh}:${mm}:${ss}` : `${mm}:${ss}`) : "";
           actualizarBotonEnviar();
         };
+        if(inHor) inHor.addEventListener("input", actualizarTiempoReal);
         inMin.addEventListener("input", actualizarTiempoReal);
         inSeg.addEventListener("input", actualizarTiempoReal);
       }, 0);
