@@ -156,6 +156,127 @@
     color:var(--verde-oscuro);
     font-weight:600;
   }
+
+  .cola-badge{
+    position:sticky;
+    top:0;
+    z-index:50;
+    background:var(--naranja);
+    color:#fff;
+    text-align:center;
+    font-size:.82rem;
+    font-weight:700;
+    padding:8px 12px;
+  }
+
+  .progreso-cuadrilla{
+    margin:-6px 0 10px;
+    font-size:.8rem;
+    color:var(--verde-oscuro);
+    background:#eef6f1;
+    border-radius:8px;
+    padding:6px 10px;
+    font-weight:600;
+  }
+
+  .aviso-duplicado{
+    margin-top:10px;
+    padding:12px;
+    border-radius:8px;
+    background:#fdecea;
+    border:1px solid #f0a89c;
+  }
+  .aviso-duplicado p{
+    margin:0 0 8px;
+    font-size:.85rem;
+    color:#b3261e;
+    font-weight:600;
+  }
+  .chk-forzar{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    font-size:.8rem;
+    color:#7a2118;
+    cursor:pointer;
+  }
+  .chk-forzar input{
+    margin-top:2px;
+    flex:none;
+  }
+
+  .overlay-confirmacion{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.55);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+    padding:16px;
+  }
+  .overlay-tarjeta{
+    background:#fff;
+    border-radius:14px;
+    padding:22px;
+    max-width:420px;
+    width:100%;
+    max-height:85vh;
+    overflow-y:auto;
+  }
+  .overlay-tarjeta h2{
+    margin:0 0 14px;
+    font-size:1.1rem;
+    color:var(--verde-oscuro);
+  }
+  .resumen-confirmacion{
+    font-size:.88rem;
+    line-height:1.7;
+  }
+  .resumen-confirmacion .fila{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    padding:6px 0;
+    border-bottom:1px dashed var(--borde);
+  }
+  .resumen-confirmacion .fila span:first-child{
+    color:var(--muted,#6b7280);
+    font-weight:600;
+  }
+  .resumen-confirmacion .fila span:last-child{
+    text-align:right;
+    font-weight:600;
+  }
+  .resumen-confirmacion img{
+    width:100%;
+    border-radius:8px;
+    margin-top:12px;
+    max-height:180px;
+    object-fit:cover;
+  }
+  .overlay-botones{
+    display:flex;
+    gap:10px;
+    margin-top:18px;
+  }
+  .btn-secundario, .btn-primario{
+    flex:1;
+    padding:12px;
+    border-radius:8px;
+    border:none;
+    font-weight:700;
+    font-size:.85rem;
+    cursor:pointer;
+  }
+  .btn-secundario{
+    background:#eee;
+    color:#333;
+  }
+  .btn-primario{
+    background:var(--naranja);
+    color:#fff;
+  }
   .criterio-bloque{
     margin-bottom:18px;
     padding-bottom:14px;
@@ -286,6 +407,8 @@
   <p>8va Movilización Forestal · Cuadrillas</p>
 </header>
 
+<div id="colaBadge" class="cola-badge oculto"></div>
+
 <div class="contenedor">
 
   <div id="avisoConfig" class="aviso-config oculto"></div>
@@ -298,14 +421,23 @@
 
     <label for="selCuadrilla">Cuadrilla</label>
     <select id="selCuadrilla"><option value="">Cargando cuadrillas...</option></select>
+    <div id="progresoCuadrilla" class="progreso-cuadrilla oculto"></div>
 
     <div id="campoParticipante" class="oculto">
       <label for="inputParticipante">Nombre del participante</label>
-      <input type="text" id="inputParticipante" placeholder="Escribí el nombre del participante" autocomplete="off"/>
+      <input type="text" id="inputParticipante" placeholder="Escribí el nombre del participante" autocomplete="off" style="text-transform:uppercase"/>
     </div>
 
     <label for="selModalidad">Modalidad / Estación</label>
     <select id="selModalidad"><option value="">Cargando modalidades...</option></select>
+
+    <div id="avisoDuplicado" class="aviso-duplicado oculto">
+      <p id="avisoDuplicadoTexto"></p>
+      <label class="chk-forzar">
+        <input type="checkbox" id="chkForzarDuplicado"/>
+        Ya sé que esta modalidad ya fue evaluada para esta cuadrilla, cargar de todas formas (corrección)
+      </label>
+    </div>
   </div>
 
   <div id="cardCriterios" class="card oculto">
@@ -323,7 +455,7 @@
     <p style="font-size:.82rem;color:var(--muted);margin-bottom:10px">
       Sacá una foto de la planilla/pizarra con el puntaje asignado. Se guarda automáticamente en Drive, en la carpeta de esta cuadrilla y modalidad.
     </p>
-    <label for="inputFoto" class="boton-foto">📷 Tomar / adjuntar foto</label>
+    <label for="inputFoto" id="labelBotonFoto" class="boton-foto">📷 Tomar / adjuntar foto</label>
     <input type="file" id="inputFoto" accept="image/*" capture="environment" style="display:none"/>
     <div id="previewFotoWrap" class="preview-foto-wrap oculto">
       <img id="previewFoto" alt="Vista previa de la evidencia"/>
@@ -338,6 +470,17 @@
 
 </div>
 
+<div id="overlayConfirmacion" class="overlay-confirmacion oculto">
+  <div class="overlay-tarjeta">
+    <h2>Revisá antes de enviar</h2>
+    <div id="resumenConfirmacion" class="resumen-confirmacion"></div>
+    <div class="overlay-botones">
+      <button id="btnVolverRevisar" class="btn-secundario" type="button">← Volver a revisar</button>
+      <button id="btnConfirmarEnvio" class="btn-primario" type="button">Confirmar y enviar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 /* ============================================================
    CONFIGURACIÓN
@@ -347,6 +490,8 @@
 const CUADRILLAS_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqjkb1s3kYmUEpoTIZtnwx1fEjxczdzyh7ehLV2FX9qDdSph-OYFLR3wXaqW5IivkaoSx9tV7apCx9/pub?output=csv";
 const JUECES_CSV_URL      = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqjkb1s3kYmUEpoTIZtnwx1fEjxczdzyh7ehLV2FX9qDdSph-OYFLR3wXaqW5IivkaoSx9tV7apCx9/pub?gid=919811758&single=true&output=csv";
 const PUNTAJE_CSV_URL     = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqjkb1s3kYmUEpoTIZtnwx1fEjxczdzyh7ehLV2FX9qDdSph-OYFLR3wXaqW5IivkaoSx9tV7apCx9/pub?gid=669454951&single=true&output=csv";
+// Hoja 4: se usa solo para detectar duplicados y mostrar el progreso por cuadrilla (lectura, best-effort)
+const HOJA4_CSV_URL       = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqjkb1s3kYmUEpoTIZtnwx1fEjxczdzyh7ehLV2FX9qDdSph-OYFLR3wXaqW5IivkaoSx9tV7apCx9/pub?gid=1926917314&single=true&output=csv";
 
 // PEGAR ACÁ la URL del Web App de Apps Script una vez desplegado (ver instrucciones)
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyRb-jY8Y9eg0eUE6_aDqZbv-NRf4_MrqDAFCc7f2BN6FDQlzzkGLB5jDhA__GS0Qma/exec";
@@ -359,6 +504,19 @@ const CRITERIO_TIEMPO = "TIEMPO";
 
 // Modalidades cuyo tiempo real se mide en HORAS, minutos y segundos (en vez de solo min:seg)
 const MODALIDADES_TIEMPO_EN_HORAS = ["LINEA DE DEFENSA"];
+
+// Compara nombres de modalidad ignorando tildes/mayúsculas, para que corregir ortografía
+// en el Google Sheet (ej: "LINEA" -> "LÍNEA") no rompa estas comparaciones.
+function normalizarSinTildes(s){
+  return String(s || "").trim().toUpperCase()
+    .replace(/[ÁÀÂÄ]/g, "A").replace(/[ÉÈÊË]/g, "E").replace(/[ÍÌÎÏ]/g, "I")
+    .replace(/[ÓÒÔÖ]/g, "O").replace(/[ÚÙÛÜ]/g, "U").replace(/Ñ/g, "N")
+    .replace(/\s+/g, " ");
+}
+function modalidadEsta(modalidad, lista){
+  const m = normalizarSinTildes(modalidad);
+  return lista.some(item => normalizarSinTildes(item) === m);
+}
 
 /* ============================================================
    PARSER CSV (soporta comas y comillas dentro de celdas)
@@ -403,6 +561,11 @@ let RUBRICA = {}; // { modalidad: { criterio: [ {cumplimiento, puntaje}, ... ] }
 let ORDEN_MODALIDADES = [];
 let respuestasActuales = {}; // { criterio: {cumplimiento, puntaje} }
 let tiempoReal = ""; // "MM:SS" del criterio TIEMPO, si corresponde
+let EVALUACIONES_EXISTENTES = new Set();      // claves "cuadrilla|modalidad" ya evaluadas en Hoja 4
+let MODALIDADES_POR_CUADRILLA = {};           // { cuadrillaNormalizada: Set(modalidadesNormalizadas evaluadas) }
+
+const CLAVE_ULTIMO_JUEZ = "puntaje_ultimo_juez";
+const CLAVE_COLA_ENVIOS = "puntaje_cola_envios";
 
 /* ============================================================
    CARGA INICIAL
@@ -421,9 +584,67 @@ async function iniciar(){
     construirRubrica(filasPuntaje);
     llenarSelect("selModalidad", ORDEN_MODALIDADES);
 
+    restaurarUltimoJuez();
+
   }catch(err){
     mostrarEstado("error", "No se pudieron cargar los datos de la planilla. Revisá tu conexión y volvé a intentar. (" + err.message + ")");
   }
+
+  // Hoja 4 es solo para avisos de duplicado/progreso: si falla, el formulario sigue funcionando igual
+  cargarEvaluacionesExistentes();
+
+  // Cola de envíos pendientes por falta de conexión
+  actualizarBadgeCola();
+  if(navigator.onLine) procesarCola();
+}
+
+async function cargarEvaluacionesExistentes(){
+  try{
+    const filasHoja4 = await obtenerCSV(HOJA4_CSV_URL);
+    if(filasHoja4.length < 2) return;
+    const header = filasHoja4[0].map(h => h.trim().toUpperCase());
+    const idxCuadrilla = header.indexOf("CUADRILLA");
+    const idxModalidad = header.indexOf("MODALIDAD");
+    const idxCriterio = header.indexOf("CRITERIO");
+    if(idxCuadrilla === -1 || idxModalidad === -1 || idxCriterio === -1) return;
+
+    EVALUACIONES_EXISTENTES = new Set();
+    MODALIDADES_POR_CUADRILLA = {};
+
+    filasHoja4.slice(1).forEach(f => {
+      const criterio = (f[idxCriterio] || "").trim().toUpperCase();
+      if(criterio !== "TOTAL MODALIDAD") return;
+      const cuadrilla = f[idxCuadrilla] || "";
+      const modalidad = f[idxModalidad] || "";
+      if(!cuadrilla || !modalidad) return;
+      EVALUACIONES_EXISTENTES.add(claveCombo(cuadrilla, modalidad));
+      const cK = normalizarSinTildes(cuadrilla);
+      if(!MODALIDADES_POR_CUADRILLA[cK]) MODALIDADES_POR_CUADRILLA[cK] = new Set();
+      MODALIDADES_POR_CUADRILLA[cK].add(normalizarSinTildes(modalidad));
+    });
+
+    fusionarColaConExistentes();
+    actualizarProgresoCuadrilla();
+    actualizarAvisoDuplicado();
+  }catch(err){
+    // Sin datos de Hoja 4 disponibles todavía: no es crítico, seguimos sin avisos de duplicado
+  }
+}
+
+// Suma también lo que está en la cola local (pendiente de sincronizar) a los sets de existentes,
+// para que el aviso de duplicado y el progreso sean correctos aunque todavía no se haya subido
+function fusionarColaConExistentes(){
+  obtenerCola().forEach(item => {
+    if(!item.cuadrilla || !item.modalidad) return;
+    EVALUACIONES_EXISTENTES.add(claveCombo(item.cuadrilla, item.modalidad));
+    const cK = normalizarSinTildes(item.cuadrilla);
+    if(!MODALIDADES_POR_CUADRILLA[cK]) MODALIDADES_POR_CUADRILLA[cK] = new Set();
+    MODALIDADES_POR_CUADRILLA[cK].add(normalizarSinTildes(item.modalidad));
+  });
+}
+
+function claveCombo(cuadrilla, modalidad){
+  return normalizarSinTildes(cuadrilla) + "|" + normalizarSinTildes(modalidad);
 }
 
 function llenarSelect(id, opciones){
@@ -473,7 +694,7 @@ function renderCriterios(){
   cont.innerHTML = "";
 
   // Mostrar el campo de participante solo para las modalidades individuales
-  if(MODALIDADES_CON_PARTICIPANTE.includes(modalidad)){
+  if(modalidadEsta(modalidad, MODALIDADES_CON_PARTICIPANTE)){
     campoParticipante.classList.remove("oculto");
   } else {
     campoParticipante.classList.add("oculto");
@@ -484,6 +705,7 @@ function renderCriterios(){
     card.classList.add("oculto");
     totalFlot.classList.add("oculto");
     cardFoto.classList.add("oculto");
+    document.getElementById("avisoDuplicado").classList.add("oculto");
     actualizarBotonEnviar();
     return;
   }
@@ -511,7 +733,7 @@ function renderCriterios(){
 
     // Bloque de tiempo real (horas/minutos/segundos según la modalidad), oculto hasta que se elija un puntaje
     if(esCriterioTiempo){
-      const usaHoras = MODALIDADES_TIEMPO_EN_HORAS.includes(modalidad.trim().toUpperCase());
+      const usaHoras = modalidadEsta(modalidad, MODALIDADES_TIEMPO_EN_HORAS);
       const tiempoDiv = document.createElement("div");
       tiempoDiv.className = "tiempo-real oculto";
       tiempoDiv.id = `tiempoReal_${grupo}`;
@@ -559,6 +781,7 @@ function renderCriterios(){
   card.classList.remove("oculto");
   totalFlot.classList.remove("oculto");
   cardFoto.classList.remove("oculto");
+  actualizarAvisoDuplicado();
   actualizarBotonEnviar();
 }
 
@@ -605,6 +828,130 @@ function actualizarTotal(){
 }
 
 /* ============================================================
+   RECORDAR EL ÚLTIMO JUEZ SELECCIONADO
+   ============================================================ */
+function restaurarUltimoJuez(){
+  try{
+    const ultimo = localStorage.getItem(CLAVE_ULTIMO_JUEZ);
+    if(!ultimo) return;
+    const sel = document.getElementById("selJuez");
+    const existe = Array.from(sel.options).some(o => o.value === ultimo);
+    if(existe) sel.value = ultimo;
+  }catch(err){ /* localStorage no disponible: seguimos sin recordar */ }
+}
+
+document.getElementById("selJuez").addEventListener("change", () => {
+  try{
+    const val = document.getElementById("selJuez").value;
+    if(val) localStorage.setItem(CLAVE_ULTIMO_JUEZ, val);
+  }catch(err){ /* ignorar */ }
+});
+
+/* ============================================================
+   PROGRESO POR CUADRILLA (cuántas modalidades ya tiene evaluadas)
+   ============================================================ */
+function actualizarProgresoCuadrilla(){
+  const cuadrilla = document.getElementById("selCuadrilla").value;
+  const cont = document.getElementById("progresoCuadrilla");
+  if(!cuadrilla || !ORDEN_MODALIDADES.length){
+    cont.classList.add("oculto");
+    return;
+  }
+  const evaluadas = MODALIDADES_POR_CUADRILLA[normalizarSinTildes(cuadrilla)] || new Set();
+  cont.textContent = `📋 ${cuadrilla}: ${evaluadas.size} de ${ORDEN_MODALIDADES.length} modalidades ya evaluadas`;
+  cont.classList.remove("oculto");
+}
+document.getElementById("selCuadrilla").addEventListener("change", () => {
+  actualizarProgresoCuadrilla();
+  actualizarAvisoDuplicado();
+});
+
+/* ============================================================
+   AVISO DE CARGA DUPLICADA
+   ============================================================ */
+function actualizarAvisoDuplicado(){
+  const cuadrilla = document.getElementById("selCuadrilla").value;
+  const modalidad = document.getElementById("selModalidad").value;
+  const aviso = document.getElementById("avisoDuplicado");
+  const chk = document.getElementById("chkForzarDuplicado");
+
+  if(!cuadrilla || !modalidad || !EVALUACIONES_EXISTENTES.has(claveCombo(cuadrilla, modalidad))){
+    aviso.classList.add("oculto");
+    chk.checked = false;
+    actualizarBotonEnviar();
+    return;
+  }
+
+  document.getElementById("avisoDuplicadoTexto").textContent =
+    `⚠ Ya existe una evaluación cargada para ${cuadrilla} en ${modalidad}.`;
+  aviso.classList.remove("oculto");
+  actualizarBotonEnviar();
+}
+document.getElementById("chkForzarDuplicado").addEventListener("change", actualizarBotonEnviar);
+
+function hayDuplicadoSinConfirmar(){
+  const cuadrilla = document.getElementById("selCuadrilla").value;
+  const modalidad = document.getElementById("selModalidad").value;
+  if(!cuadrilla || !modalidad) return false;
+  const esDuplicado = EVALUACIONES_EXISTENTES.has(claveCombo(cuadrilla, modalidad));
+  return esDuplicado && !document.getElementById("chkForzarDuplicado").checked;
+}
+
+/* ============================================================
+   COLA DE ENVÍOS PENDIENTES (sin conexión)
+   ============================================================ */
+function obtenerCola(){
+  try{
+    return JSON.parse(localStorage.getItem(CLAVE_COLA_ENVIOS) || "[]");
+  }catch(err){ return []; }
+}
+function guardarCola(cola){
+  try{ localStorage.setItem(CLAVE_COLA_ENVIOS, JSON.stringify(cola)); }catch(err){ /* ignorar */ }
+}
+function agregarACola(payload){
+  const cola = obtenerCola();
+  cola.push(payload);
+  guardarCola(cola);
+  EVALUACIONES_EXISTENTES.add(claveCombo(payload.cuadrilla, payload.modalidad));
+  const cK = normalizarSinTildes(payload.cuadrilla);
+  if(!MODALIDADES_POR_CUADRILLA[cK]) MODALIDADES_POR_CUADRILLA[cK] = new Set();
+  MODALIDADES_POR_CUADRILLA[cK].add(normalizarSinTildes(payload.modalidad));
+  actualizarBadgeCola();
+}
+function actualizarBadgeCola(){
+  const cola = obtenerCola();
+  const badge = document.getElementById("colaBadge");
+  if(cola.length === 0){
+    badge.classList.add("oculto");
+    return;
+  }
+  badge.textContent = `⏳ ${cola.length} envío${cola.length>1?"s":""} pendiente${cola.length>1?"s":""} de sincronizar — se enviarán solos apenas haya conexión`;
+  badge.classList.remove("oculto");
+}
+async function procesarCola(){
+  let cola = obtenerCola();
+  if(!cola.length) return;
+  while(cola.length){
+    const item = cola[0];
+    try{
+      await fetch(APPS_SCRIPT_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(item)
+      });
+      cola.shift();
+      guardarCola(cola);
+      actualizarBadgeCola();
+    }catch(err){
+      break; // sin conexión: dejamos el resto en la cola para más tarde
+    }
+  }
+}
+window.addEventListener("online", procesarCola);
+setInterval(() => { if(navigator.onLine) procesarCola(); }, 30000);
+
+/* ============================================================
    FOTO DE EVIDENCIA (obligatoria)
    ============================================================ */
 let fotoBase64 = null;
@@ -616,6 +963,7 @@ function limpiarFoto(){
   document.getElementById("inputFoto").value = "";
   document.getElementById("previewFotoWrap").classList.add("oculto");
   document.getElementById("previewFoto").src = "";
+  document.getElementById("labelBotonFoto").textContent = "📷 Tomar / adjuntar foto";
   const est = document.getElementById("fotoEstado");
   est.textContent = "";
   est.classList.remove("ok");
@@ -660,6 +1008,7 @@ document.getElementById("inputFoto").addEventListener("change", async (e) => {
 
     document.getElementById("previewFoto").src = dataUrl;
     document.getElementById("previewFotoWrap").classList.remove("oculto");
+    document.getElementById("labelBotonFoto").textContent = "🔁 Repetir foto";
     est.textContent = "✔ Foto lista para enviar";
     est.classList.add("ok");
   }catch(err){
@@ -687,7 +1036,7 @@ function actualizarBotonEnviar(){
     return;
   }
 
-  if(MODALIDADES_CON_PARTICIPANTE.includes(modalidad)){
+  if(modalidadEsta(modalidad, MODALIDADES_CON_PARTICIPANTE)){
     const nombreParticipante = document.getElementById("inputParticipante").value.trim();
     if(!nombreParticipante){
       btn.disabled = true;
@@ -718,24 +1067,44 @@ function actualizarBotonEnviar(){
     return;
   }
 
+  if(hayDuplicadoSinConfirmar()){
+    btn.disabled = true;
+    btn.textContent = "Marcá la casilla de confirmación para cargar el duplicado";
+    return;
+  }
+
   btn.disabled = false;
   btn.textContent = "Enviar puntaje";
 }
 
 document.getElementById("selJuez").addEventListener("change", actualizarBotonEnviar);
 document.getElementById("selCuadrilla").addEventListener("change", actualizarBotonEnviar);
-document.getElementById("inputParticipante").addEventListener("input", actualizarBotonEnviar);
+document.getElementById("inputParticipante").addEventListener("input", (e) => {
+  const input = e.target;
+  const inicio = input.selectionStart;
+  const fin = input.selectionEnd;
+  input.value = input.value.toUpperCase();
+  input.setSelectionRange(inicio, fin);
+  actualizarBotonEnviar();
+});
 
 /* ============================================================
-   ENVÍO
+   ENVÍO (con pantalla de confirmación y cola offline)
    ============================================================ */
-document.getElementById("btnEnviar").addEventListener("click", enviarPuntaje);
+document.getElementById("btnEnviar").addEventListener("click", mostrarConfirmacion);
+document.getElementById("btnVolverRevisar").addEventListener("click", () => {
+  document.getElementById("overlayConfirmacion").classList.add("oculto");
+});
+document.getElementById("btnConfirmarEnvio").addEventListener("click", () => {
+  document.getElementById("overlayConfirmacion").classList.add("oculto");
+  enviarPuntajeReal();
+});
 
-async function enviarPuntaje(){
+function armarPayload(){
   const juez = document.getElementById("selJuez").value;
   const cuadrilla = document.getElementById("selCuadrilla").value;
   const modalidad = document.getElementById("selModalidad").value;
-  const participante = MODALIDADES_CON_PARTICIPANTE.includes(modalidad)
+  const participante = modalidadEsta(modalidad, MODALIDADES_CON_PARTICIPANTE)
     ? document.getElementById("inputParticipante").value.trim()
     : "";
   const total = Object.values(respuestasActuales).reduce((s, r) => s + (r.puntaje || 0), 0);
@@ -747,13 +1116,35 @@ async function enviarPuntaje(){
     tiempoReal: criterio.trim().toUpperCase() === CRITERIO_TIEMPO ? tiempoReal : ""
   }));
 
-  const payload = {
+  return {
     juez, cuadrilla, modalidad, participante, tiempoReal, total,
     criterios: criteriosArray,
     fotoBase64: fotoBase64,
     fotoMimeType: fotoMimeType,
-    fotoNombre: `${cuadrilla}_${modalidad}_${Date.now()}.jpg`.replace(/\s+/g, "_")
+    fotoNombre: `${cuadrilla}_${modalidad}_${Date.now()}.jpg`.replace(/\s+/g, "_"),
+    _fotoPreview: document.getElementById("previewFoto").src || null // solo para mostrar en la confirmación, no se guarda en Sheets
   };
+}
+
+function mostrarConfirmacion(){
+  const payload = armarPayload();
+  const resumen = document.getElementById("resumenConfirmacion");
+  resumen.innerHTML = `
+    <div class="fila"><span>Juez</span><span>${escapeHtml(payload.juez)}</span></div>
+    <div class="fila"><span>Cuadrilla</span><span>${escapeHtml(payload.cuadrilla)}</span></div>
+    <div class="fila"><span>Modalidad</span><span>${escapeHtml(payload.modalidad)}</span></div>
+    ${payload.participante ? `<div class="fila"><span>Participante</span><span>${escapeHtml(payload.participante)}</span></div>` : ""}
+    ${payload.tiempoReal ? `<div class="fila"><span>Tiempo real</span><span>${escapeHtml(payload.tiempoReal)}</span></div>` : ""}
+    <div class="fila"><span>Puntaje total</span><span>${payload.total} pts</span></div>
+    ${payload._fotoPreview ? `<img src="${payload._fotoPreview}" alt="Evidencia"/>` : ""}
+  `;
+  document.getElementById("overlayConfirmacion").classList.remove("oculto");
+}
+
+async function enviarPuntajeReal(){
+  const payload = armarPayload();
+  const cuadrilla = payload.cuadrilla, modalidad = payload.modalidad, total = payload.total;
+  delete payload._fotoPreview; // no se envía al servidor, era solo para la vista previa
 
   if(APPS_SCRIPT_URL === "PEGAR_AQUI_URL_WEBAPP"){
     mostrarEstado("error", "Falta configurar la URL del Web App de Apps Script en el código (APPS_SCRIPT_URL).");
@@ -762,6 +1153,13 @@ async function enviarPuntaje(){
 
   mostrarEstado("cargando", "Enviando puntaje y subiendo la foto...");
   document.getElementById("btnEnviar").disabled = true;
+
+  if(!navigator.onLine){
+    agregarACola(payload);
+    mostrarEstado("ok", `Sin conexión: guardado localmente. Se enviará solo apenas vuelva la señal (${cuadrilla} - ${modalidad}, ${total} pts).`);
+    resetearFormularioParcial();
+    return;
+  }
 
   try{
     // mode:"no-cors" evita que el navegador bloquee la respuesta por CORS.
@@ -775,11 +1173,17 @@ async function enviarPuntaje(){
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload)
     });
+    EVALUACIONES_EXISTENTES.add(claveCombo(cuadrilla, modalidad));
+    const cK = normalizarSinTildes(cuadrilla);
+    if(!MODALIDADES_POR_CUADRILLA[cK]) MODALIDADES_POR_CUADRILLA[cK] = new Set();
+    MODALIDADES_POR_CUADRILLA[cK].add(normalizarSinTildes(modalidad));
     mostrarEstado("ok", `Puntaje guardado: ${cuadrilla} - ${modalidad} (${total} pts). Podés cargar el siguiente.`);
     resetearFormularioParcial();
   }catch(err){
-    mostrarEstado("error", "Error de red al enviar. Verificá tu conexión e intentá de nuevo. (" + err.message + ")");
-    document.getElementById("btnEnviar").disabled = false;
+    // Sin conexión real al enviar: lo guardamos en la cola en vez de perder la carga
+    agregarACola(payload);
+    mostrarEstado("ok", `Sin conexión: guardado localmente. Se enviará solo apenas vuelva la señal (${cuadrilla} - ${modalidad}, ${total} pts).`);
+    resetearFormularioParcial();
   }
 }
 
@@ -788,6 +1192,9 @@ function resetearFormularioParcial(){
   document.getElementById("selModalidad").value = "";
   document.getElementById("inputParticipante").value = "";
   document.getElementById("campoParticipante").classList.add("oculto");
+  document.getElementById("progresoCuadrilla").classList.add("oculto");
+  document.getElementById("avisoDuplicado").classList.add("oculto");
+  document.getElementById("chkForzarDuplicado").checked = false;
   respuestasActuales = {};
   tiempoReal = "";
   limpiarFoto();
